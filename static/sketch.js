@@ -5,7 +5,7 @@ let spacing = 38;
 let textBox;
 let sendButton;
 
-const API_BASE = "https://tu-api.onrender.com"; // <-- cambialo por tu URL real
+const API_BASE = "https://chatuflaskbackend.onrender.com"; // <-- cambialo por tu URL real
 
 function request() {
   Text.length = 0;
