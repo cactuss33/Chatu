@@ -2,53 +2,43 @@ let Text = [];
 let User = [];
 let you = "paconcito";
 let spacing = 38;
-let contador = 0;
 let textBox;
 let sendButton;
 
+const API_BASE = "https://tu-api.onrender.com"; // <-- cambialo por tu URL real
+
 function request() {
-  // Reset data
   Text.length = 0;
   User.length = 0;
 
-  // Get data and save it
-  loadStrings("/static/text.txt?t=" + Date.now(), (incomingText) => {
-    loadStrings("/static/user.txt?t=" + Date.now(), (incomingUser) => {
-      Text = incomingText;
-      User = incomingUser;
-      Text.pop(); // Delete the blank line
-      User.pop(); // Delete the blank line
-      redraw(); // Redraw the screen with the new information
-    });
-  });
+  fetch(`${API_BASE}/messages`)
+    .then(response => response.json())
+    .then(data => {
+      Text = data.text;
+      User = data.user;
+      redraw();
+    })
+    .catch(error => console.error("Error al obtener datos:", error));
 }
 
 function setup() {
-  createCanvas(window.innerWidth,window.innerHeight);
+  createCanvas(window.innerWidth, window.innerHeight);
   textSize(24);
 
-  // Create Inputs
   textBox = createInput();
   sendButton = createButton("Send");
 
-  // Set positions
   textBox.position(40, height - 20);
   sendButton.position(width - 70, height - 20);
   textBox.size(width - 80 - 40, 20);
   sendButton.size(47, 25);
-  
-  // Set event
+
   sendButton.mousePressed(send);
+  request();
 
-  request(); // Get data from the server
-
-  // Aquí conectamos con Socket.IO y escuchamos el evento 'refresh_files'
-  const socket = io();
-
-  socket.on('refresh_files', () => {
-    console.log("Mensaje recibido del servidor: refresh_files");
-    request(); // Actualizamos solo cuando el servidor avisa
-  });
+  // Si tu backend soporta sockets, podrías usar esto más adelante
+  // const socket = io(API_BASE);
+  // socket.on('refresh_files', request);
 
   noLoop();
 }
@@ -64,47 +54,37 @@ function draw() {
       textAlign(RIGHT, TOP);
       let cX = width - 50;
       let cY = i * spacing + 50;
-      rect(
-        cX + 7,
-        cY - 4,
-        -textWidth(msg) - 14,
-        textAscent() + textDescent() + 7,
-        4
-      );
+      rect(cX + 7, cY - 4, -textWidth(msg) - 14, textAscent() + textDescent() + 7, 4);
       text(msg, cX, cY + 2);
     } else {
       textAlign(LEFT, TOP);
       let cX = 50;
       let cY = i * spacing + 50;
-      rect(
-        cX - 7,
-        cY - 4,
-        textWidth(msg) + 14,
-        textAscent() + textDescent() + 7,
-        4
-      );
+      rect(cX - 7, cY - 4, textWidth(msg) + 14, textAscent() + textDescent() + 7, 4);
       text(msg, cX, cY + 2);
     }
   }
 }
-function keyPressed(){
-	if(key === ' ')
-		send()
+
+function keyPressed() {
+  if (key === ' ') send();
 }
 
-
 function send() {
-  let message = []
-  //load message data to send
-  message.push(textBox.value()); //text you just write
-  message.push(you); //your name
+  const text = textBox.value().trim();
+  if (text === "") return;
 
-  if (message[0].trim() !== "") {
-    httpPost('/send-data', 'text', message, (respuesta) => {
-      console.log('Respuesta del servidor:', respuesta);
-      // Opcional: puedes quitar esta llamada si prefieres esperar el evento push
-      // request();
-    });
-    textBox.value("");  
-  }
+  fetch(`${API_BASE}/send`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ text: text, user: you })
+  })
+    .then(response => response.json())
+    .then(data => {
+      console.log("Respuesta del servidor:", data);
+      request(); // opcional si tenés sockets
+    })
+    .catch(error => console.error("Error al enviar:", error));
+
+  textBox.value("");
 }
